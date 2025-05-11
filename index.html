@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Instagram Reel Downloader</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    font-family: 'Poppins', sans-serif;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px 10px 40px;
+  }
+
+  .container {
+    background: rgba(0,0,0,0.75);
+    max-width: 350px;
+    width: 100%;
+    border-radius: 15px;
+    padding: 25px 25px 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1 {
+    font-weight: 600;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    text-align: center;
+    user-select: none;
+  }
+
+  input[type="url"] {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
+    margin-bottom: 20px;
+    transition: box-shadow 0.3s ease-in-out;
+  }
+
+  input[type="url"]:focus {
+    box-shadow: 0 0 10px #fff;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px 0;
+    border-radius: 8px;
+    border: none;
+    background: #e4405f;
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.3s ease-in-out, transform 0.2s ease-in-out;
+    user-select: none;
+  }
+
+  button:active {
+    transform: scale(0.96);
+  }
+
+  button:disabled {
+    background: #a63c4e;
+    cursor: not-allowed;
+  }
+
+  .result {
+    margin-top: 25px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .video-preview {
+    max-width: 100%;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+  }
+
+  .download-link {
+    display: inline-block;
+    background: #25d366;
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 30px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.7);
+    transition: background 0.3s ease-in-out;
+  }
+
+  .download-link:hover {
+    background: #1da851;
+  }
+
+  .error {
+    background: #ff5252;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(255, 82, 82, 0.7);
+  }
+
+  @media (max-width: 400px) {
+    body {
+      padding: 15px 10px 30px;
+    }
+    .container {
+      max-width: 100%;
+      padding: 20px 20px 25px;
+    }
+  }
+</style>
+</head>
+<body>
+  <main class="container" role="main" aria-label="Instagram Reel Downloader">
+    <h1>Instagram Reel Downloader</h1>
+    <input
+      id="urlInput"
+      type="url"
+      placeholder="Paste Instagram Reel URL here"
+      aria-label="Instagram Reel URL input"
+      autocomplete="off"
+      required
+    />
+    <button id="downloadBtn" type="button" aria-label="Download Reel Video">Download</button>
+    <div class="result" id="result" aria-live="polite"></div>
+  </main>
+
+  <script>
+    (function() {
+      const urlInput = document.getElementById('urlInput');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const result = document.getElementById('result');
+
+      function validateInstagramReelURL(url) {
+        const regex = /^https?:\/\/(www\.)?instagram\.com\/reel\/[a-zA-Z0-9_-]+\/?(\?.*)?$/i;
+        return regex.test(url.trim());
+      }
+
+      async function fetchVideoUrl(url) {
+        try {
+          const apiUrl = `http://localhost:3000/api/reel?url=${encodeURIComponent(url)}`;
+          const response = await fetch(apiUrl);
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to fetch video URL from backend');
+          }
+          const data = await response.json();
+          return data.videoUrl;
+        } catch (error) {
+          throw error;
+        }
+      }
+
+      function clearResult() {
+        result.innerHTML = '';
+      }
+
+      function showError(message) {
+        result.innerHTML = '<div class="error" role="alert">' + message + '</div>';
+      }
+
+      function showVideo(url) {
+        result.innerHTML = '';
+
+        const videoEl = document.createElement('video');
+        videoEl.classList.add('video-preview');
+        videoEl.src = url;
+        videoEl.controls = true;
+        videoEl.preload = 'metadata';
+        videoEl.setAttribute('aria-label', 'Instagram Reel Video Preview');
+        result.appendChild(videoEl);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.className = 'download-link';
+        link.textContent = 'Download Video';
+        link.setAttribute('download', 'instagram-reel.mp4');
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer nofollow');
+        result.appendChild(link);
+      }
+
+      downloadBtn.addEventListener('click', async () => {
+        clearResult();
+        const reelUrl = urlInput.value.trim();
+        if (!validateInstagramReelURL(reelUrl)) {
+          showError('Please enter a valid Instagram Reel URL (e.g. https://www.instagram.com/reel/xxxxxx/)');
+          return;
+        }
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = 'Loading...';
+        try {
+          const videoUrl = await fetchVideoUrl(reelUrl);
+          showVideo(videoUrl);
+        } catch (err) {
+          showError(err.message + ' Instagram may restrict direct downloading or backend error.');
+        }
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download';
+      });
+
+      urlInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          downloadBtn.click();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
